@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="HackHaven — Hands-on cybersecurity labs, guided walkthroughs, and community help. Plans from $3/month. Student price $1/month.">
+<title>HackHaven — Affordable Cybersecurity Labs</title>
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  /* Reset */
+  * {margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif;}
+  body {background:#f5f7fa; color:#1e1e1e; line-height:1.6;}
+  a {text-decoration:none; color:#fff;}
+  .container {max-width:1200px; margin:0 auto; padding:2rem;}
+
+  /* Hero */
+  .hero {display:flex; flex-direction:column; align-items:center; text-align:center; padding:4rem 2rem; background:#1e2a38; color:#fff;}
+  .hero h1 {font-size:3rem; margin-bottom:1rem;}
+  .hero p {font-size:1.25rem; margin-bottom:2rem; max-width:700px;}
+  .cta-btn {background:#00bfa5; padding:1rem 2rem; border-radius:8px; font-weight:bold; transition:0.3s;}
+  .cta-btn:hover {background:#009c87;}
+
+  /* Features */
+  .features {display:flex; flex-wrap:wrap; justify-content:space-around; margin:4rem 0; text-align:center;}
+  .feature {flex:1 1 250px; margin:1rem; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05);}
+  .feature h3 {margin-bottom:1rem; color:#00bfa5;}
+
+  /* Pricing */
+  .pricing {text-align:center; margin:4rem 0;}
+  .pricing h2 {margin-bottom:2rem; font-size:2rem;}
+  .pricing-cards {display:flex; flex-wrap:wrap; justify-content:center; gap:2rem;}
+  .card {background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:250px;}
+  .card h3 {margin-bottom:1rem; color:#1e2a38;}
+  .card p {margin-bottom:1rem;}
+  .card .price {font-size:1.5rem; font-weight:bold; color:#00bfa5; margin-bottom:1rem;}
+  .card button {background:#00bfa5; border:none; padding:0.75rem 1.5rem; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer; transition:0.3s;}
+  .card button:hover {background:#009c87;}
+
+  /* Footer */
+  footer {text-align:center; padding:2rem 1rem; background:#1e2a38; color:#fff;}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>HackHaven</h1>
+  <p>Hands-on cybersecurity labs, guided walkthroughs, and community help — starting at just $3/month. Learn real skills, not just theory.</p>
+  <a href="#pricing" class="cta-btn">Get Started — Try 7 Days Free</a>
+</section>
+
+<!-- Features -->
+<section class="features container">
+  <div class="feature">
+    <h3>Guided Labs</h3>
+    <p>Step-by-step instructions for beginner to intermediate learners in web, crypto, and forensics.</p>
+  </div>
+  <div class="feature">
+    <h3>Affordable Learning</h3>
+    <p>Plans start at just $3/month, $24/year, or $1/month for students.</p>
+  </div>
+  <div class="feature">
+    <h3>Community Support</h3>
+    <p>Access hints, leaderboards, and our Discord community for help and collaboration.</p>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" class="pricing">
+  <h2>Pricing Plans</h2>
+  <div class="pricing-cards">
+    <div class="card">
+      <h3>Monthly</h3>
+      <p>Full access to labs, hints, and forums</p>
+      <div class="price">$3 / month</div>
+      <button data-plan="monthly">Get Started</button>
+    </div>
+    <div class="card">
+      <h3>Yearly</h3>
+      <p>Best value, billed annually</p>
+      <div class="price">$24 / year</div>
+      <button data-plan="yearly">Get Started</button>
+    </div>
+    <div class="card">
+      <h3>Student</h3>
+      <p>Valid student ID or edu email required</p>
+      <div class="price">$1 / month</div>
+      <button data-plan="student">Get Started</button>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  &copy; 2025 HackHaven. All rights reserved.
+</footer>
+
+<script>
+  const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY_HERE'); // Replace with your actual publishable key
+  const buttons = document.querySelectorAll('.card button');
+
+  buttons.forEach(button => {
+    button.addEventListener('click', async (event) => {
+      const plan = event.target.dataset.plan;
+
+      try {
+        const response = await fetch('/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ plan: plan }),
+        });
+
+        const session = await response.json();
+
+        if (session.id) {
+          const result = await stripe.redirectToCheckout({
+            sessionId: session.id,
+          });
+
+          if (result.error) {
+            // If `redirectToCheckout` fails due to a browser or network
+            // error, display the localized error message to your customer.
+            alert(result.error.message);
+          }
+        } else {
+          alert('Error creating checkout session.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
