@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
+const nodemailer = require('nodemailer');
 const router = express.Router();
 
 // --- CONFIGURATION ---
@@ -22,16 +23,9 @@ let pendingStudents = [];
 let verificationTokens = new Map();
 const activeConnections = new Map();
 
-const transporter = {
-  sendMail: (options) => {
-    console.log('--- Email Simulation ---');
-    console.log(`To: ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Text: ${options.text}`);
-    console.log('------------------------');
-    return Promise.resolve();
-  }
-};
+const transporter = nodemailer.createTransport({
+    jsonTransport: true
+});
 
 // --- SSE Helper Function ---
 function sendStatusUpdate(email, data) {
@@ -43,12 +37,9 @@ function sendStatusUpdate(email, data) {
 
 // --- ROUTES ---
 
-// 2.1) New Endpoint: SSE connection for live status updates
 router.get('/status/updates', (req, res) => {
     const { token } = req.query;
-    if (!token) {
-        return res.status(400).json({ error: 'Verification token is required.' });
-    }
+    if (!token) return res.status(400).json({ error: 'Verification token is required.' });
 
     const tokenData = verificationTokens.get(token);
     if (!tokenData || Date.now() > tokenData.expires) {
@@ -63,9 +54,7 @@ router.get('/status/updates', (req, res) => {
     const email = tokenData.email.toLowerCase();
     activeConnections.set(email, res);
 
-    const keepAliveInterval = setInterval(() => {
-        res.write(': keep-alive\n\n');
-    }, 15000);
+    const keepAliveInterval = setInterval(() => res.write(': keep-alive\n\n'), 15000);
 
     req.on('close', () => {
         activeConnections.delete(email);
@@ -86,11 +75,12 @@ router.post('/verify-email', async (req, res) => {
 
     try {
         const verificationLink = `http://localhost:3000/student_status.html?token=${token}`;
-        await transporter.sendMail({
+        const mailResult = await transporter.sendMail({
             from: 'no-reply@hackhaven.com', to: email,
             subject: 'Your HackHaven Status Link',
             text: `Please use the following link to securely view your verification status. This link is valid for 15 minutes.\n\n${verificationLink}`
         });
+        console.log("Verification email sent:", mailResult.message);
         res.status(200).json({ message: 'A verification link has been sent to your email.' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to send verification email.' });
@@ -143,9 +133,11 @@ router.post('/admin/verify-student', async (req, res) => {
   if (!student) return res.status(404).json({ error: 'Student not found' });
   if (!['approve','reject'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
 
+  const timestamp = new Date().toISOString();
+
   if (action === 'approve') {
     student.status = 'approved';
-    student.approvedAt = new Date().toISOString();
+    student.approvedAt = timestamp;
 
     try {
       const session = await stripe.checkout.sessions.create({
@@ -159,11 +151,20 @@ router.post('/admin/verify-student', async (req, res) => {
 
       sendStatusUpdate(student.email, { status: student.status, approvedAt: student.approvedAt, stripeUrl: student.stripeUrl });
 
-      await transporter.sendMail({
-        from: 'no-reply@hackhaven.com', to: student.email, subject: 'HackHaven Student Plan Approved',
-        text: `Congratulations! Your student verification is approved. Please use the following link to complete your subscription for $1/month: ${session.url}`
+      // --- ENHANCED EMAIL TEMPLATE ---
+      const mailResult = await transporter.sendMail({
+        from: 'no-reply@hackhaven.com', to: student.email,
+        subject: 'Your HackHaven Student Verification Has Been Approved',
+        html: `
+            <h3>Congratulations!</h3>
+            <p>Your student verification for HackHaven has been <strong>approved</strong>.</p>
+            <p><strong>Date of Approval:</strong> ${new Date(timestamp).toLocaleString()}</p>
+            <p>To activate your discounted $1/month plan, please complete your subscription using the secure link below:</p>
+            <p><a href="${session.url}">Complete Subscription</a></p>
+            <p>Welcome to the community!</p>
+        `
       });
-
+      console.log("Approval email sent:", mailResult.message);
       res.json({ message: 'Student approved. Checkout link sent.', checkoutUrl: session.url });
 
     } catch (err) {
@@ -175,10 +176,18 @@ router.post('/admin/verify-student', async (req, res) => {
 
     sendStatusUpdate(student.email, { status: student.status });
 
-    await transporter.sendMail({
-      from: 'no-reply@hackhaven.com', to: student.email, subject: 'HackHaven Student Plan Rejected',
-      text: 'Your student verification was rejected. You can still subscribe to the standard $3/month plan.'
+    // --- ENHANCED EMAIL TEMPLATE ---
+    const mailResult = await transporter.sendMail({
+      from: 'no-reply@hackhaven.com', to: student.email,
+      subject: 'Your HackHaven Student Verification Has Been Rejected',
+      html: `
+        <h3>Update on Your HackHaven Verification</h3>
+        <p>Unfortunately, your student verification submission has been <strong>rejected</strong>.</p>
+        <p><strong>Date of Rejection:</strong> ${new Date(timestamp).toLocaleString()}</p>
+        <p>If you believe this was in error, please contact our support team. You can still join the HackHaven community by subscribing to our standard plan.</p>
+      `
     });
+    console.log("Rejection email sent:", mailResult.message);
 
     if (student.filePath && fs.existsSync(student.filePath)) fs.unlinkSync(student.filePath);
 
