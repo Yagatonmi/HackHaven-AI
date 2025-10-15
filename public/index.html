@@ -36,6 +36,34 @@
   .card button {background:#00bfa5; border:none; padding:0.75rem 1.5rem; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer; transition:0.3s;}
   .card button:hover {background:#009c87;}
 
+  /* Student Verification Modal */
+  .modal {display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.6);}
+  .modal-content {background-color:#fefefe; margin:10% auto; padding:2rem; border:1px solid #888; width:80%; max-width:500px; border-radius:12px; text-align:left;}
+  .modal-content h3 {margin-bottom:1.5rem; text-align:center;}
+  .modal-content p {margin-bottom:1rem;}
+  .close-btn {color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;}
+  .close-btn:hover, .close-btn:focus {color:black;}
+  .modal-content form div {margin-bottom:1rem;}
+  .modal-content label {display:block; margin-bottom:0.5rem;}
+  .modal-content input[type="email"], .modal-content input[type="file"] {width:100%; padding:0.75rem; border:1px solid #ccc; border-radius:8px;}
+  .modal-content button {width:100%;}
+  #verification-message {margin-top:1rem; text-align:center; font-weight:bold; min-height: 1.2em;}
+  .spinner {
+    display: none;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border-left-color: #00bfa5;
+    animation: spin 1s ease infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+
   /* Footer */
   footer {text-align:center; padding:2rem 1rem; background:#1e2a38; color:#fff;}
 </style>
@@ -90,6 +118,35 @@
   </div>
 </section>
 
+<!-- Student Verification Modal -->
+<div id="student-verification-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h3>Student Verification</h3>
+    <p>To qualify for the student discount, please enter your account email and provide one of the following for verification.</p>
+    <form id="verification-form">
+      <div>
+        <label for="contact-email">Your Account Email (Required):</label>
+        <input type="email" id="contact-email" name="email" placeholder="you@example.com" required>
+      </div>
+      <hr style="margin: 1rem 0;">
+      <p>Please provide ONE of the following:</p>
+      <div>
+        <label for="edu-email">1. Your .edu email address:</label>
+        <input type="email" id="edu-email" name="eduEmail" placeholder="student@university.edu">
+      </div>
+      <p style="text-align:center; font-weight:bold;">OR</p>
+      <div>
+        <label for="student-file">2. A photo of your Student ID (PDF, JPG, PNG):</label>
+        <input type="file" id="student-file" name="studentFile" accept=".pdf,.jpg,.jpeg,.png">
+      </div>
+      <button type="submit" class="cta-btn" id="submit-verification-btn">Submit for Verification</button>
+      <div class="spinner" id="verification-spinner"></div>
+    </form>
+    <div id="verification-message"></div>
+  </div>
+</div>
+
 <!-- Footer -->
 <footer>
   &copy; 2025 HackHaven. All rights reserved.
@@ -98,40 +155,107 @@
 <script>
   const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY_HERE'); // Replace with your actual publishable key
   const buttons = document.querySelectorAll('.card button');
+  const modal = document.getElementById('student-verification-modal');
+  const closeModalBtn = document.querySelector('.close-btn');
+  const verificationForm = document.getElementById('verification-form');
+  const verificationMessage = document.getElementById('verification-message');
+  const submitBtn = document.getElementById('submit-verification-btn');
+  const spinner = document.getElementById('verification-spinner');
+
+  // Function to open the modal
+  const openModal = () => {
+    verificationMessage.textContent = '';
+    verificationForm.reset();
+    modal.style.display = 'block';
+  }
+  // Function to close the modal
+  const closeModal = () => modal.style.display = 'none';
+
+  closeModalBtn.addEventListener('click', closeModal);
+  window.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
 
   buttons.forEach(button => {
     button.addEventListener('click', async (event) => {
       const plan = event.target.dataset.plan;
 
-      try {
-        const response = await fetch('/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ plan: plan }),
-        });
-
-        const session = await response.json();
-
-        if (session.id) {
-          const result = await stripe.redirectToCheckout({
-            sessionId: session.id,
+      if (plan === 'student') {
+        openModal();
+      } else {
+        try {
+          const response = await fetch('/create-checkout-session', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ plan: plan }),
           });
-
-          if (result.error) {
-            // If `redirectToCheckout` fails due to a browser or network
-            // error, display the localized error message to your customer.
-            alert(result.error.message);
+          const session = await response.json();
+          if (session.id) {
+            stripe.redirectToCheckout({ sessionId: session.id });
+          } else {
+            alert('Error creating checkout session.');
           }
-        } else {
-          alert('Error creating checkout session.');
+        } catch (error) {
+          console.error('Error:', error);
+          alert('An error occurred. Please try again.');
         }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
       }
     });
+  });
+
+  verificationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(verificationForm);
+    verificationMessage.textContent = ''; // Clear previous messages
+
+    // --- Show loading state ---
+    submitBtn.style.display = 'none';
+    spinner.style.display = 'block';
+
+    // --- Basic validation ---
+    if (!formData.get('email')) {
+      verificationMessage.textContent = 'Please enter your account email.';
+      verificationMessage.style.color = 'red';
+      submitBtn.style.display = 'block';
+      spinner.style.display = 'none';
+      return;
+    }
+    if (!formData.get('eduEmail') && !formData.get('studentFile').name) {
+      verificationMessage.textContent = 'Please provide either an edu email or upload a file.';
+      verificationMessage.style.color = 'red';
+      submitBtn.style.display = 'block';
+      spinner.style.display = 'none';
+      return;
+    }
+
+    try {
+      const response = await fetch('/student/submit-student-verification', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        verificationForm.reset();
+        verificationMessage.style.color = 'green';
+        verificationMessage.textContent = result.message;
+        setTimeout(closeModal, 3000);
+      } else {
+        verificationMessage.style.color = 'red';
+        verificationMessage.textContent = result.error || 'Submission failed. Please try again.';
+      }
+    } catch (error) {
+      console.error('Submission Error:', error);
+      verificationMessage.style.color = 'red';
+      verificationMessage.textContent = 'An unexpected error occurred. Please check your connection and try again.';
+    } finally {
+      // --- Hide loading state ---
+      submitBtn.style.display = 'block';
+      spinner.style.display = 'none';
+    }
   });
 </script>
 

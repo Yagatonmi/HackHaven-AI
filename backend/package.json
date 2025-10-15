@@ -13,6 +13,8 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.9",
     "stripe": "^19.1.0"
   }
 }

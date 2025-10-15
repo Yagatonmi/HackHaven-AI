@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard - Student Verifications</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #1e1e1e;
+    margin: 0;
+    padding: 2rem;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #1e2a38;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+  th {
+    background-color: #1e2a38;
+    color: #fff;
+  }
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  .actions button {
+    cursor: pointer;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: bold;
+    margin-right: 0.5rem;
+  }
+  .approve-btn { background-color: #00bfa5; }
+  .reject-btn { background-color: #f44336; }
+  .approve-btn:hover { background-color: #009c87; }
+  .reject-btn:hover { background-color: #d32f2f; }
+  #alert-container {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    display: none; /* Hidden by default */
+    font-weight: bold;
+  }
+  .alert-success { background-color: #d4edda; color: #155724; }
+  .alert-error { background-color: #f8d7da; color: #721c24; }
+  #loading-state {
+    text-align: center;
+    font-size: 1.2rem;
+    padding: 2rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Pending Student Verifications</h1>
+
+  <div id="alert-container"></div>
+
+  <div id="dashboard-content">
+    <div id="loading-state">Loading pending verifications...</div>
+    <table id="verifications-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Account Email</th>
+          <th>Verification Method</th>
+          <th>Evidence</th>
+          <th>Submitted At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="verifications-tbody">
+        <!-- Rows will be dynamically inserted here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const table = document.getElementById('verifications-table');
+    const tbody = document.getElementById('verifications-tbody');
+    const loadingState = document.getElementById('loading-state');
+    const alertContainer = document.getElementById('alert-container');
+
+    // --- Show an alert message ---
+    function showAlert(message, type = 'success') {
+      alertContainer.textContent = message;
+      alertContainer.className = type === 'success' ? 'alert-success' : 'alert-error';
+      alertContainer.style.display = 'block';
+      setTimeout(() => {
+        alertContainer.style.display = 'none';
+      }, 4000);
+    }
+
+    // --- Render table rows ---
+    function renderTable(verifications) {
+      tbody.innerHTML = ''; // Clear existing rows
+      if (verifications.length === 0) {
+        loadingState.textContent = 'No pending verifications found.';
+        table.style.display = 'none';
+        return;
+      }
+
+      verifications.forEach(student => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-row-id', student.id);
+
+        const evidence = student.filePath
+          ? `<a href="/student/uploads/${student.filePath.split('/').pop()}" target="_blank">View File</a>`
+          : student.eduEmail;
+
+        row.innerHTML = `
+          <td>${student.id}</td>
+          <td>${student.email}</td>
+          <td>${student.eduEmail ? 'EDU Email' : 'File Upload'}</td>
+          <td>${evidence}</td>
+          <td>${new Date(student.submittedAt).toLocaleString()}</td>
+          <td class="actions">
+            <button class="approve-btn" data-student-id="${student.id}">Approve</button>
+            <button class="reject-btn" data-student-id="${student.id}">Reject</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      loadingState.style.display = 'none';
+      table.style.display = 'table';
+    }
+
+    // --- Fetch pending verifications from the backend ---
+    async function fetchPendingVerifications() {
+      try {
+        const response = await fetch('/student/admin/pending-students');
+        if (!response.ok) throw new Error('Failed to fetch data');
+        const verifications = await response.json();
+        renderTable(verifications);
+      } catch (error) {
+        loadingState.style.display = 'none';
+        showAlert('Error fetching verifications: ' + error.message, 'error');
+      }
+    }
+
+    // --- Handle approve/reject actions ---
+    async function handleVerificationAction(studentId, action) {
+      try {
+        const response = await fetch('/student/admin/verify-student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, action })
+        });
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.error || 'API request failed');
+
+        showAlert(`Student #${studentId} has been ${action}ed.`, 'success');
+
+        // Remove the row from the table
+        const rowToRemove = document.querySelector(`tr[data-row-id="${studentId}"]`);
+        if (rowToRemove) rowToRemove.remove();
+        if (tbody.rows.length === 0) {
+            loadingState.textContent = 'No pending verifications found.';
+            loadingState.style.display = 'block';
+            table.style.display = 'none';
+        }
+
+      } catch (error) {
+        showAlert(`Error: ${error.message}`, 'error');
+      }
+    }
+
+    // --- Event Delegation for action buttons ---
+    tbody.addEventListener('click', (event) => {
+      const target = event.target;
+      if (target.classList.contains('approve-btn')) {
+        const studentId = target.dataset.studentId;
+        handleVerificationAction(studentId, 'approve');
+      }
+      if (target.classList.contains('reject-btn')) {
+        const studentId = target.dataset.studentId;
+        handleVerificationAction(studentId, 'reject');
+      }
+    });
+
+    // --- Initial fetch on page load ---
+    fetchPendingVerifications();
+  });
+</script>
+
+</body>
+</html>
