@@ -12,162 +12,77 @@
       margin: 0;
       padding: 1rem;
     }
-    .status-container {
-      max-width: 700px;
-      margin: 2rem auto;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    header h1 {
-      font-size: 2.5rem;
-      color: #1e2a38;
-      margin: 0;
-    }
-    header h2 {
-      font-size: 1.5rem;
-      color: #666;
-      margin: 0;
-    }
+    .status-container { max-width: 700px; margin: 2rem auto; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-size: 2.5rem; color: #1e2a38; margin: 0; }
+    header h2 { font-size: 1.5rem; color: #666; margin: 0; }
     #status-card-container, #request-form-container {
       background-color: #ffffff;
       padding: 2.5rem;
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    .form-group {
-      margin-bottom: 1rem;
-    }
-    input[type="email"] {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    button {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      background-color: #007bff;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-    }
-    #loading-spinner, #error-message, #feedback-message {
-      text-align: center;
-      padding: 2rem;
-    }
-    .spinner {
-      border: 5px solid rgba(0, 0, 0, 0.1);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border-left-color: #007bff;
-      animation: spin 1s ease infinite;
-      margin: 0 auto 1rem;
-    }
+    .form-group { margin-bottom: 1rem; }
+    input[type="email"] { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    button { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; background-color: #007bff; color: #fff; font-weight: bold; cursor: pointer; transition: background-color 0.3s ease; }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #loading-spinner, #error-message, #feedback-message { text-align: center; padding: 2rem; }
+    .spinner { border: 5px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #007bff; animation: spin 1s ease infinite; margin: 0 auto 1rem; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .message {
-      padding: 1rem;
-      border-radius: 8px;
-      font-weight: bold;
-      text-align: center;
-    }
+    .message { padding: 1rem; border-radius: 8px; font-weight: bold; text-align: center; }
     .message.error { background-color: #f8d7da; color: #721c24; }
     .message.success { background-color: #d4edda; color: #155724; }
-    #status-card section {
-      margin-bottom: 2rem;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 1.5rem;
-    }
+    #status-card section { margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1.5rem; }
     #status-card section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    #status-label {
-      padding: 0.3rem 0.8rem;
-      border-radius: 15px;
-      font-size: 1rem;
-      font-weight: bold;
-      color: #fff;
-      text-transform: capitalize;
-    }
+    #status-label { padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 1rem; font-weight: bold; color: #fff; text-transform: capitalize; }
     .status-pending { background-color: #ff9800; }
     .status-approved { background-color: #4caf50; }
     .status-rejected { background-color: #f44336; }
     .stripe-link-container { display: flex; gap: 0.5rem; }
-    #stripe-url {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background-color: #f4f4f4;
-      flex-grow: 1;
+    #stripe-url { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; background-color: #f4f4f4; flex-grow: 1; }
+    #copy-feedback { display: block; margin-top: 0.5rem; color: #007bff; font-weight: bold; height: 1em; }
+    .live-badge {
+        display: inline-block;
+        margin-left: 10px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: #d32f2f;
+        animation: pulse 1.5s infinite;
     }
-    #copy-feedback {
-      display: block;
-      margin-top: 0.5rem;
-      color: #007bff;
-      font-weight: bold;
-      height: 1em;
-    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
-
   <div class="status-container">
-    <header>
-      <h1>HackHaven</h1>
-      <h2>Student Status</h2>
-    </header>
-
+    <header><h1>HackHaven</h1><h2>Student Status</h2></header>
     <main>
-      <!-- Part 1: Form to Request a Verification Link -->
       <div id="request-form-container">
         <h3>View Your Status</h3>
         <p>Enter the email address you used to submit your verification. We'll send you a secure, one-time link to view your status.</p>
         <form id="request-link-form">
-          <div class="form-group">
-            <input type="email" id="request-email" placeholder="you@example.com" required>
-          </div>
+          <div class="form-group"><input type="email" id="request-email" placeholder="you@example.com" required></div>
           <button type="submit" id="request-link-btn">Send Verification Link</button>
         </form>
         <div id="feedback-message" class="message" style="display: none;"></div>
       </div>
-
-      <!-- Part 2: Status Display Area -->
       <div id="status-display-container" style="display: none;">
-        <div id="loading-spinner">
-          <div class="spinner"></div>
-          <p>Loading your status...</p>
-        </div>
+        <div id="loading-spinner"><div class="spinner"></div><p>Loading your status...</p></div>
         <div id="error-message" class="message error" style="display: none;"></div>
         <div id="status-card" style="display: none;">
           <section class="student-info">
             <h3>Verification Details</h3>
             <p><strong>Email:</strong> <span id="student-email"></span></p>
             <p><strong>Submitted At:</strong> <span id="submitted-at"></span></p>
-            <p id="approval-timestamp" style="display: none;">
-              <strong>Approved At:</strong> <span id="approved-at"></span>
-            </p>
+            <p id="approval-timestamp" style="display: none;"><strong>Approved At:</strong> <span id="approved-at"></span></p>
           </section>
           <section class="status-details">
-            <h3>Your Status: <span id="status-label"></span></h3>
+            <h3>Your Status: <span id="status-label"></span><span id="live-indicator" style="display:none;"></span></h3>
             <p id="status-message"></p>
           </section>
           <section id="stripe-section" style="display: none;">
             <h4>Complete Your Subscription</h4>
-            <div class="stripe-link-container">
-              <input type="text" id="stripe-url" readonly>
-              <button id="copy-btn">Copy</button>
-            </div>
+            <div class="stripe-link-container"><input type="text" id="stripe-url" readonly><button id="copy-btn">Copy</button></div>
             <small id="copy-feedback"></small>
           </section>
         </div>
@@ -198,33 +113,36 @@
       const stripeUrlInput = document.getElementById('stripe-url');
       const copyBtn = document.getElementById('copy-btn');
       const copyFeedback = document.getElementById('copy-feedback');
+      const liveIndicator = document.getElementById('live-indicator');
 
-      // --- Main Logic: Check for token in URL ---
+      let eventSource; // To hold the EventSource connection
+
+      // --- Main Logic ---
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
 
       if (token) {
-        // If a token is in the URL, hide the form and try to fetch the status.
         requestFormContainer.style.display = 'none';
         statusDisplayContainer.style.display = 'block';
         fetchStatusWithToken(token);
       } else {
-        // If no token, show the form to request one.
         requestFormContainer.style.display = 'block';
         statusDisplayContainer.style.display = 'none';
       }
 
-      // --- API Call to Fetch Status with Token ---
       async function fetchStatusWithToken(token) {
         try {
           const response = await fetch(`/student/status?token=${token}`);
           const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || 'Failed to verify token.');
-          }
+          if (!response.ok) throw new Error(data.error || 'Failed to verify token.');
+
           updateUI(data);
           loadingSpinner.style.display = 'none';
           statusCard.style.display = 'block';
+
+          // --- MODIFICATION: Connect to SSE after initial fetch ---
+          connectToSSE(token);
+
         } catch (error) {
           loadingSpinner.style.display = 'none';
           errorMessage.textContent = error.message;
@@ -232,7 +150,28 @@
         }
       }
 
-      // --- API Call to Request a Verification Link ---
+      // --- MODIFICATION: Function to connect to the SSE endpoint ---
+      function connectToSSE(token) {
+        if (eventSource) eventSource.close(); // Close any existing connection
+
+        eventSource = new EventSource(`/student/status/updates?token=${token}`);
+
+        eventSource.onopen = () => {
+          liveIndicator.innerHTML = ' <span class="live-badge">(Live)</span>';
+          liveIndicator.style.display = 'inline';
+        };
+
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          updateUI(data); // Re-use the existing UI update function
+        };
+
+        eventSource.onerror = () => {
+          liveIndicator.textContent = ' (Offline)';
+          eventSource.close();
+        };
+      }
+
       requestLinkForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const email = requestEmailInput.value;
@@ -249,9 +188,8 @@
             body: JSON.stringify({ email })
           });
           const result = await response.json();
-          if (!response.ok) {
-            throw new Error(result.error || 'Failed to send link.');
-          }
+          if (!response.ok) throw new Error(result.error || 'Failed to send link.');
+
           feedbackMessage.textContent = result.message;
           feedbackMessage.className = 'message success';
         } catch (error) {
@@ -264,12 +202,13 @@
         }
       });
 
-      // --- UI Update Logic (from previous step) ---
       function updateUI(data) {
-        studentEmailEl.textContent = data.email;
-        submittedAtEl.textContent = new Date(data.submittedAt).toLocaleString();
+        studentEmailEl.textContent = data.email || studentEmailEl.textContent;
+        if(data.submittedAt) submittedAtEl.textContent = new Date(data.submittedAt).toLocaleString();
+
         statusLabelEl.textContent = data.status;
         statusLabelEl.className = `status-label status-${data.status}`;
+
         if (data.status === 'approved') {
             statusMessageEl.textContent = "Your verification is approved! Complete your subscription below.";
             if (data.approvedAt) {
@@ -287,7 +226,6 @@
         }
       }
 
-      // --- Copy to Clipboard Event Listener ---
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(stripeUrlInput.value).then(() => {
           copyFeedback.textContent = 'Copied!';
