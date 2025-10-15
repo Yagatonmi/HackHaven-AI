@@ -230,16 +230,11 @@
       const result = await response.json();
 
       if (response.ok) {
-        // --- MODIFICATION START ---
-        // On success, save the ID and redirect to the status page.
-        localStorage.setItem('studentVerificationId', result.studentId);
+        // --- FIX: On success, just show a message and close the modal. ---
+        verificationForm.reset();
         verificationMessage.style.color = 'green';
-        verificationMessage.textContent = `${result.message} Redirecting you to the status page...`;
-
-        setTimeout(() => {
-          window.location.href = `/student_status.html?id=${result.studentId}`;
-        }, 2000);
-        // --- MODIFICATION END ---
+        verificationMessage.textContent = result.message;
+        setTimeout(closeModal, 4000); // Close modal after 4 seconds
       } else {
         verificationMessage.style.color = 'red';
         verificationMessage.textContent = result.error || 'Submission failed. Please try again.';
@@ -249,11 +244,8 @@
       verificationMessage.style.color = 'red';
       verificationMessage.textContent = 'An unexpected error occurred. Please check your connection and try again.';
     } finally {
-      // Keep spinner and button hidden on success, as we are redirecting.
-      if (!response.ok) {
-          submitBtn.style.display = 'block';
-          spinner.style.display = 'none';
-      }
+        submitBtn.style.display = 'block';
+        spinner.style.display = 'none';
     }
   });
 </script>

@@ -30,13 +30,40 @@
       color: #666;
       margin: 0;
     }
-    #status-card-container {
+    #status-card-container, #request-form-container {
       background-color: #ffffff;
       padding: 2.5rem;
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    #loading-spinner {
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    input[type="email"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    #loading-spinner, #error-message, #feedback-message {
       text-align: center;
       padding: 2rem;
     }
@@ -49,37 +76,21 @@
       animation: spin 1s ease infinite;
       margin: 0 auto 1rem;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #error-message {
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .message {
       padding: 1rem;
       border-radius: 8px;
-      background-color: #f8d7da;
-      color: #721c24;
       font-weight: bold;
       text-align: center;
     }
+    .message.error { background-color: #f8d7da; color: #721c24; }
+    .message.success { background-color: #d4edda; color: #155724; }
     #status-card section {
       margin-bottom: 2rem;
       border-bottom: 1px solid #eee;
       padding-bottom: 1.5rem;
     }
-    #status-card section:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-    h3, h4 {
-      color: #1e2a38;
-      margin-top: 0;
-      margin-bottom: 1rem;
-    }
-    p {
-      line-height: 1.6;
-      margin: 0.5rem 0;
-    }
+    #status-card section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     #status-label {
       padding: 0.3rem 0.8rem;
       border-radius: 15px;
@@ -91,10 +102,7 @@
     .status-pending { background-color: #ff9800; }
     .status-approved { background-color: #4caf50; }
     .status-rejected { background-color: #f44336; }
-    .stripe-link-container {
-      display: flex;
-      gap: 0.5rem;
-    }
+    .stripe-link-container { display: flex; gap: 0.5rem; }
     #stripe-url {
       width: 100%;
       padding: 0.75rem;
@@ -103,26 +111,12 @@
       background-color: #f4f4f4;
       flex-grow: 1;
     }
-    #copy-btn {
-      padding: 0.75rem 1rem;
-      border: none;
-      border-radius: 8px;
-      background-color: #007bff;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    #copy-btn:hover {
-      background-color: #0056b3;
-    }
     #copy-feedback {
       display: block;
       margin-top: 0.5rem;
       color: #007bff;
       font-weight: bold;
       height: 1em;
-      transition: opacity 0.3s;
     }
   </style>
 </head>
@@ -134,33 +128,49 @@
       <h2>Student Status</h2>
     </header>
 
-    <main id="status-card-container">
-      <div id="loading-spinner">
-        <div class="spinner"></div>
-        <p>Loading your status...</p>
-      </div>
-      <div id="error-message" style="display: none;"></div>
-      <div id="status-card" style="display: none;">
-        <section class="student-info">
-          <h3>Verification Details</h3>
-          <p><strong>Email:</strong> <span id="student-email"></span></p>
-          <p><strong>Submitted At:</strong> <span id="submitted-at"></span></p>
-          <p id="approval-timestamp" style="display: none;">
-            <strong>Approved At:</strong> <span id="approved-at"></span>
-          </p>
-        </section>
-        <section class="status-details">
-          <h3>Your Status: <span id="status-label"></span></h3>
-          <p id="status-message"></p>
-        </section>
-        <section id="stripe-section" style="display: none;">
-          <h4>Complete Your Subscription</h4>
-          <div class="stripe-link-container">
-            <input type="text" id="stripe-url" readonly aria-label="Stripe checkout URL">
-            <button id="copy-btn" aria-label="Copy checkout link to clipboard">Copy</button>
+    <main>
+      <!-- Part 1: Form to Request a Verification Link -->
+      <div id="request-form-container">
+        <h3>View Your Status</h3>
+        <p>Enter the email address you used to submit your verification. We'll send you a secure, one-time link to view your status.</p>
+        <form id="request-link-form">
+          <div class="form-group">
+            <input type="email" id="request-email" placeholder="you@example.com" required>
           </div>
-          <small id="copy-feedback"></small>
-        </section>
+          <button type="submit" id="request-link-btn">Send Verification Link</button>
+        </form>
+        <div id="feedback-message" class="message" style="display: none;"></div>
+      </div>
+
+      <!-- Part 2: Status Display Area -->
+      <div id="status-display-container" style="display: none;">
+        <div id="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading your status...</p>
+        </div>
+        <div id="error-message" class="message error" style="display: none;"></div>
+        <div id="status-card" style="display: none;">
+          <section class="student-info">
+            <h3>Verification Details</h3>
+            <p><strong>Email:</strong> <span id="student-email"></span></p>
+            <p><strong>Submitted At:</strong> <span id="submitted-at"></span></p>
+            <p id="approval-timestamp" style="display: none;">
+              <strong>Approved At:</strong> <span id="approved-at"></span>
+            </p>
+          </section>
+          <section class="status-details">
+            <h3>Your Status: <span id="status-label"></span></h3>
+            <p id="status-message"></p>
+          </section>
+          <section id="stripe-section" style="display: none;">
+            <h4>Complete Your Subscription</h4>
+            <div class="stripe-link-container">
+              <input type="text" id="stripe-url" readonly>
+              <button id="copy-btn">Copy</button>
+            </div>
+            <small id="copy-feedback"></small>
+          </section>
+        </div>
       </div>
     </main>
   </div>
@@ -168,6 +178,13 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // --- DOM Element References ---
+      const requestFormContainer = document.getElementById('request-form-container');
+      const statusDisplayContainer = document.getElementById('status-display-container');
+      const requestLinkForm = document.getElementById('request-link-form');
+      const requestEmailInput = document.getElementById('request-email');
+      const requestLinkBtn = document.getElementById('request-link-btn');
+      const feedbackMessage = document.getElementById('feedback-message');
+
       const loadingSpinner = document.getElementById('loading-spinner');
       const errorMessage = document.getElementById('error-message');
       const statusCard = document.getElementById('status-card');
@@ -182,62 +199,29 @@
       const copyBtn = document.getElementById('copy-btn');
       const copyFeedback = document.getElementById('copy-feedback');
 
-      // --- Real API Fetch using ID ---
-      async function fetchStudentStatus(id) {
-        const response = await fetch(`/student/status/${id}`);
+      // --- Main Logic: Check for token in URL ---
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
 
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('No verification status was found for this submission ID.');
-            }
-            throw new Error('A network error occurred. Please try again.');
-        }
-        return response.json();
+      if (token) {
+        // If a token is in the URL, hide the form and try to fetch the status.
+        requestFormContainer.style.display = 'none';
+        statusDisplayContainer.style.display = 'block';
+        fetchStatusWithToken(token);
+      } else {
+        // If no token, show the form to request one.
+        requestFormContainer.style.display = 'block';
+        statusDisplayContainer.style.display = 'none';
       }
 
-      // --- UI Update Logic ---
-      function updateUI(data) {
-        studentEmailEl.textContent = data.email;
-        submittedAtEl.textContent = new Date(data.submittedAt).toLocaleString();
-
-        statusLabelEl.textContent = data.status;
-        statusLabelEl.className = `status-label status-${data.status}`;
-
-        switch (data.status) {
-          case 'approved':
-            statusMessageEl.textContent = "Your verification is approved! Complete your subscription below.";
-            if (data.approvedAt) {
-              approvalTimestampEl.style.display = 'block';
-              approvedAtEl.textContent = new Date(data.approvedAt).toLocaleString();
-            }
-            if (data.stripeUrl) {
-              stripeUrlInput.value = data.stripeUrl;
-              stripeSection.style.display = 'block';
-            }
-            break;
-          case 'pending':
-            statusMessageEl.textContent = "Your verification is being reviewed. Please check back later.";
-            break;
-          case 'rejected':
-            statusMessageEl.textContent = "Your verification was rejected. Please re-submit or contact support.";
-            break;
-        }
-      }
-
-      // --- Main Execution on Page Load ---
-      async function main() {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id') || localStorage.getItem('studentVerificationId');
-
-        if (!id) {
-          loadingSpinner.style.display = 'none';
-          errorMessage.textContent = 'Error: No submission ID found.';
-          errorMessage.style.display = 'block';
-          return;
-        }
-
+      // --- API Call to Fetch Status with Token ---
+      async function fetchStatusWithToken(token) {
         try {
-          const data = await fetchStudentStatus(id);
+          const response = await fetch(`/student/status?token=${token}`);
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to verify token.');
+          }
           updateUI(data);
           loadingSpinner.style.display = 'none';
           statusCard.style.display = 'block';
@@ -248,17 +232,68 @@
         }
       }
 
-      // --- Event Listeners ---
+      // --- API Call to Request a Verification Link ---
+      requestLinkForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email = requestEmailInput.value;
+        if (!email) return;
+
+        requestLinkBtn.disabled = true;
+        requestLinkBtn.textContent = 'Sending...';
+        feedbackMessage.style.display = 'none';
+
+        try {
+          const response = await fetch('/student/verify-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to send link.');
+          }
+          feedbackMessage.textContent = result.message;
+          feedbackMessage.className = 'message success';
+        } catch (error) {
+          feedbackMessage.textContent = error.message;
+          feedbackMessage.className = 'message error';
+        } finally {
+          feedbackMessage.style.display = 'block';
+          requestLinkBtn.disabled = false;
+          requestLinkBtn.textContent = 'Send Verification Link';
+        }
+      });
+
+      // --- UI Update Logic (from previous step) ---
+      function updateUI(data) {
+        studentEmailEl.textContent = data.email;
+        submittedAtEl.textContent = new Date(data.submittedAt).toLocaleString();
+        statusLabelEl.textContent = data.status;
+        statusLabelEl.className = `status-label status-${data.status}`;
+        if (data.status === 'approved') {
+            statusMessageEl.textContent = "Your verification is approved! Complete your subscription below.";
+            if (data.approvedAt) {
+              approvalTimestampEl.style.display = 'block';
+              approvedAtEl.textContent = new Date(data.approvedAt).toLocaleString();
+            }
+            if (data.stripeUrl) {
+              stripeUrlInput.value = data.stripeUrl;
+              stripeSection.style.display = 'block';
+            }
+        } else if (data.status === 'pending') {
+            statusMessageEl.textContent = "Your verification is being reviewed. Please check back later.";
+        } else if (data.status === 'rejected') {
+            statusMessageEl.textContent = "Your verification was rejected. Please re-submit or contact support.";
+        }
+      }
+
+      // --- Copy to Clipboard Event Listener ---
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(stripeUrlInput.value).then(() => {
           copyFeedback.textContent = 'Copied!';
           setTimeout(() => copyFeedback.textContent = '', 2000);
-        }).catch(err => {
-          copyFeedback.textContent = 'Failed to copy.';
         });
       });
-
-      main();
     });
   </script>
 
