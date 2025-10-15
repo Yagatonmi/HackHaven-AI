@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Verification Form</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f7f9;
+      color: #333;
+      margin: 0;
+      padding: 2rem;
+    }
+    .form-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      padding: 2.5rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: #1e2a38;
+    }
+    .form-container > p {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #666;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    input[type="email"], input[type="file"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    input[type="file"] {
+      padding: 0.5rem;
+    }
+    small {
+      display: block;
+      margin-top: 0.5rem;
+      color: #888;
+    }
+    .separator {
+      text-align: center;
+      font-weight: bold;
+      margin: 1.5rem 0;
+      color: #999;
+    }
+    .image-preview {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .image-preview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .form-messages {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+      display: none;
+    }
+    .form-messages.success {
+      background-color: #d4edda;
+      color: #155724;
+      display: block;
+    }
+    .form-messages.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+    button[type="submit"] {
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+    button[type="submit"]:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h2>Student Verification</h2>
+    <p>Please enter your details and provide proof of your student status.</p>
+
+    <form id="student-form" novalidate>
+      <div class="form-group">
+        <label for="email">Your Account Email (Required)</label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com">
+      </div>
+
+      <p>Provide <strong>one</strong> of the following for verification:</p>
+
+      <div class="form-group">
+        <label for="eduEmail">1. Your .edu Email Address</label>
+        <input type="email" id="eduEmail" name="eduEmail" placeholder="student@university.edu">
+      </div>
+
+      <p class="separator">OR</p>
+
+      <div class="form-group">
+        <label for="studentFile">2. Upload your Student ID</label>
+        <input type="file" id="studentFile" name="studentFile" accept=".pdf,.jpg,.jpeg,.png">
+        <small>Accepted formats: PDF, JPG, PNG. Max size: 2MB.</small>
+      </div>
+
+      <div id="image-preview" class="image-preview"></div>
+
+      <div id="form-messages" class="form-messages"></div>
+
+      <button type="submit" id="submit-btn">Submit Verification</button>
+    </form>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('student-form');
+      const emailInput = document.getElementById('email');
+      const eduEmailInput = document.getElementById('eduEmail');
+      const fileInput = document.getElementById('studentFile');
+      const imagePreview = document.getElementById('image-preview');
+      const messagesDiv = document.getElementById('form-messages');
+      const submitBtn = document.getElementById('submit-btn');
+
+      const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+      const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+      function showMessage(message, type = 'error') {
+        messagesDiv.textContent = message;
+        messagesDiv.className = `form-messages ${type}`;
+      }
+
+      function validateEmail(email) {
+        const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
+      }
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        imagePreview.innerHTML = ''; // Clear previous preview
+        if (!file) return;
+
+        // Preview only if it's an image
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            imagePreview.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        messagesDiv.textContent = '';
+        messagesDiv.className = 'form-messages';
+
+        // --- Client-Side Validation ---
+        if (!validateEmail(emailInput.value)) {
+          showMessage('Please enter a valid account email address.');
+          return;
+        }
+
+        const eduEmailValue = eduEmailInput.value;
+        const file = fileInput.files[0];
+
+        if (!eduEmailValue && !file) {
+          showMessage('Please provide either an .edu email or upload a file.');
+          return;
+        }
+
+        if (eduEmailValue && !eduEmailValue.endsWith('.edu')) {
+            showMessage('Please enter a valid .edu email address.');
+            return;
+        }
+
+        if (file) {
+          if (file.size > MAX_FILE_SIZE) {
+            showMessage('File is too large. Maximum size is 2MB.');
+            return;
+          }
+          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            showMessage('Invalid file type. Please upload a PDF, JPG, or PNG.');
+            return;
+          }
+        }
+
+        // --- Submission ---
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch('/student/submit-student-verification', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            showMessage('Verification submitted successfully! Please check your email for updates.', 'success');
+            form.reset();
+            imagePreview.innerHTML = '';
+          } else {
+            showMessage(result.error || 'An unknown server error occurred.');
+          }
+        } catch (error) {
+          showMessage('An unexpected error occurred. Please check your connection and try again.');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Verification';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
