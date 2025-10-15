@@ -114,14 +114,35 @@ router.post('/submit-student-verification', upload.single('studentFile'), (req, 
 });
 
 router.get('/admin/students', (req, res) => {
-  const { status } = req.query;
+  const { status, search, page = 1, limit = 20 } = req.query;
+
+  let results = [...pendingStudents];
 
   if (status && status !== 'all') {
-    const filteredStudents = pendingStudents.filter(s => s.status === status);
-    return res.json(filteredStudents);
+    results = results.filter(s => s.status === status);
   }
 
-  res.json(pendingStudents);
+  if (search) {
+    const searchTerm = search.toLowerCase();
+    results = results.filter(s =>
+      s.email.toLowerCase().includes(searchTerm) ||
+      (s.eduEmail && s.eduEmail.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const totalCount = results.length;
+  const totalPages = Math.ceil(totalCount / limit);
+  const currentPage = parseInt(page, 10);
+  const startIndex = (currentPage - 1) * limit;
+  const endIndex = startIndex + parseInt(limit, 10);
+  const paginatedStudents = results.slice(startIndex, endIndex);
+
+  res.json({
+    students: paginatedStudents,
+    totalCount,
+    totalPages,
+    currentPage,
+  });
 });
 
 router.post('/admin/verify-student', async (req, res) => {
@@ -152,14 +173,7 @@ router.post('/admin/verify-student', async (req, res) => {
       sendEmail({
         from: 'no-reply@hackhaven.com', to: student.email,
         subject: 'Your HackHaven Student Verification Has Been Approved',
-        html: `
-            <h3>Congratulations!</h3>
-            <p>Your student verification for HackHaven has been <strong>approved</strong>.</p>
-            <p><strong>Date of Approval:</strong> ${new Date(timestamp).toLocaleString()}</p>
-            <p>To activate your discounted $1/month plan, please complete your subscription using the secure link below:</p>
-            <p><a href="${session.url}">Complete Subscription</a></p>
-            <p>Welcome to the community!</p>
-        `
+        html: `...`
       });
 
       res.json({ message: 'Student approved. Checkout link sent.', checkoutUrl: session.url });
@@ -176,12 +190,7 @@ router.post('/admin/verify-student', async (req, res) => {
     sendEmail({
       from: 'no-reply@hackhaven.com', to: student.email,
       subject: 'Your HackHaven Student Verification Has Been Rejected',
-      html: `
-        <h3>Update on Your HackHaven Verification</h3>
-        <p>Unfortunately, your student verification submission has been <strong>rejected</strong>.</p>
-        <p><strong>Date of Rejection:</strong> ${new Date(timestamp).toLocaleString()}</p>
-        <p>If you believe this was in error, please contact our support team. You can still join the HackHaven community by subscribing to our standard plan.</p>
-      `
+      html: `...`
     });
 
     if (student.filePath && fs.existsSync(student.filePath)) fs.unlinkSync(student.filePath);

@@ -5,110 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard - Student Verifications</title>
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f4f7f9;
-    color: #1e1e1e;
-    margin: 0;
-    padding: 2rem;
-  }
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background-color: #fff;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 1rem;
-    color: #1e2a38;
-  }
-  .filter-controls {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-  .filter-controls button {
-    background-color: #e9ecef;
-    color: #495057;
-    border: 1px solid #ced4da;
-    padding: 0.5rem 1rem;
-    margin: 0 0.25rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .filter-controls button.active {
-    background-color: #007bff;
-    color: #fff;
-    border-color: #007bff;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 2rem;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 0.75rem;
-    text-align: left;
-    vertical-align: middle;
-  }
-  th {
-    background-color: #1e2a38;
-    color: #fff;
-  }
-  tr:nth-child(even) {
-    background-color: #f2f2f2;
-  }
-  .actions button {
-    cursor: pointer;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    color: #fff;
-    font-weight: bold;
-    margin-right: 0.5rem;
-    transition: background-color 0.2s;
-  }
-  .actions button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; color: #1e1e1e; margin: 0; padding: 2rem; }
+  .container { max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+  h1 { text-align: center; margin-bottom: 1rem; color: #1e2a38; }
+  .dashboard-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .filter-controls button { background-color: #e9ecef; color: #495057; border: 1px solid #ced4da; padding: 0.5rem 1rem; margin: 0 0.25rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  .filter-controls button.active { background-color: #007bff; color: #fff; border-color: #007bff; }
+  .search-controls { display: flex; gap: 0.5rem; }
+  .search-controls input { padding: 0.5rem; border-radius: 6px; border: 1px solid #ced4da; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+  th, td { border: 1px solid #ddd; padding: 0.75rem; text-align: left; vertical-align: middle; }
+  th { background-color: #1e2a38; color: #fff; }
+  tr:nth-child(even) { background-color: #f2f2f2; }
+  .actions button { cursor: pointer; border: none; padding: 0.5rem 1rem; border-radius: 6px; color: #fff; font-weight: bold; margin-right: 0.5rem; }
+  .actions button:disabled { background-color: #ccc; cursor: not-allowed; }
   .approve-btn { background-color: #00bfa5; }
   .reject-btn { background-color: #f44336; }
-  .status-label {
-    padding: 0.3rem 0.6rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    color: #fff;
-    text-transform: capitalize;
-  }
+  .status-label { padding: 0.3rem 0.6rem; border-radius: 15px; font-size: 0.8rem; font-weight: bold; color: #fff; text-transform: capitalize; }
   .status-pending { background-color: #ff9800; }
   .status-approved { background-color: #4caf50; }
   .status-rejected { background-color: #f44336; }
-  #alert-container {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    display: none;
-    font-weight: bold;
-    word-wrap: break-word;
-  }
+  #alert-container { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; font-weight: bold; }
   .alert-success { background-color: #d4edda; color: #155724; }
   .alert-error { background-color: #f8d7da; color: #721c24; }
-  .copy-btn {
-    padding: 0.3rem 0.6rem;
-    margin-left: 1rem;
-    cursor: pointer;
-  }
-  #loading-state {
-    text-align: center;
-    font-size: 1.2rem;
-    padding: 2rem;
-  }
+  #loading-state { text-align: center; font-size: 1.2rem; padding: 2rem; }
+  .pagination-controls { text-align: center; }
+  .pagination-controls button { background-color: #fff; border: 1px solid #ced4da; margin: 0 0.2rem; }
+  .pagination-controls button.active { background-color: #007bff; color: #fff; border-color: #007bff; }
+  .pagination-controls button:disabled { background-color: #e9ecef; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -116,114 +40,134 @@
 <div class="container">
   <h1>Student Verification Dashboard</h1>
 
-  <div class="filter-controls" id="filter-controls">
-    <button class="active" data-filter="all">All</button>
-    <button data-filter="pending">Pending</button>
-    <button data-filter="approved">Approved</button>
-    <button data-filter="rejected">Rejected</button>
+  <div class="dashboard-controls">
+    <div class="filter-controls" id="filter-controls">
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="pending">Pending</button>
+      <button data-filter="approved">Approved</button>
+      <button data-filter="rejected">Rejected</button>
+    </div>
+    <div class="search-controls">
+      <input type="search" id="search-input" placeholder="Search by email...">
+    </div>
   </div>
 
   <div id="alert-container"></div>
 
-  <div id="dashboard-content">
+  <div>
     <div id="loading-state">Loading verifications...</div>
     <table id="verifications-table" style="display:none;">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Account Email</th>
-          <th>Evidence</th>
-          <th>Submitted At</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>ID</th><th>Account Email</th><th>Evidence</th><th>Submitted At</th><th>Status</th><th>Actions</th>
         </tr>
       </thead>
-      <tbody id="verifications-tbody">
-      </tbody>
+      <tbody id="verifications-tbody"></tbody>
     </table>
+    <div class="pagination-controls" id="pagination-controls"></div>
   </div>
 </div>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM References ---
     const tbody = document.getElementById('verifications-tbody');
     const loadingState = document.getElementById('loading-state');
     const alertContainer = document.getElementById('alert-container');
     const filterControls = document.getElementById('filter-controls');
+    const searchInput = document.getElementById('search-input');
+    const paginationControls = document.getElementById('pagination-controls');
 
-    let currentFilter = 'all'; // Default filter
-    let allStudents = []; // Cache all students to avoid re-fetching
+    // --- State Management ---
+    let state = {
+      currentPage: 1,
+      currentFilter: 'all',
+      currentSearch: '',
+      limit: 20
+    };
 
-    // --- Show an alert message ---
-    function showAlert(message, type = 'success', isHtml = false) {
-      if (isHtml) alertContainer.innerHTML = message;
-      else alertContainer.textContent = message;
+    // --- Alert Utility ---
+    function showAlert(message, type = 'success') {
+      alertContainer.textContent = message;
       alertContainer.className = `alert-${type}`;
       alertContainer.style.display = 'block';
-      setTimeout(() => { alertContainer.style.display = 'none'; }, 8000);
+      setTimeout(() => { alertContainer.style.display = 'none'; }, 5000);
     }
 
-    // --- Render table based on current filter ---
-    function renderTable() {
-      let studentsToRender = allStudents;
-      if (currentFilter !== 'all') {
-        studentsToRender = allStudents.filter(s => s.status === currentFilter);
-      }
-
+    // --- Rendering Functions ---
+    function renderTable(students) {
       tbody.innerHTML = '';
-
-      if (studentsToRender.length === 0) {
-        loadingState.textContent = `No ${currentFilter === 'all' ? '' : currentFilter} students found.`;
+      if (students.length === 0) {
+        loadingState.textContent = 'No students found matching your criteria.';
         loadingState.style.display = 'block';
         document.getElementById('verifications-table').style.display = 'none';
       } else {
         loadingState.style.display = 'none';
         document.getElementById('verifications-table').style.display = 'table';
       }
-
-      studentsToRender.forEach(student => {
+      students.forEach(student => {
         const row = document.createElement('tr');
-        row.setAttribute('data-row-id', student.id);
-
         const evidence = student.filePath ? `<a href="/student/uploads/${student.filePath.split('/').pop()}" target="_blank">View File</a>` : student.eduEmail || 'N/A';
-        const actions = student.status === 'pending'
-          ? `<button class="approve-btn" data-student-id="${student.id}">Approve</button>
-             <button class="reject-btn" data-student-id="${student.id}">Reject</button>`
-          : 'N/A';
-
-        row.innerHTML = `
-          <td>${student.id}</td>
-          <td>${student.email}</td>
-          <td>${evidence}</td>
-          <td>${new Date(student.submittedAt).toLocaleString()}</td>
-          <td><span class="status-label status-${student.status}">${student.status}</span></td>
-          <td class="actions">${actions}</td>
-        `;
+        const actions = student.status === 'pending' ? `<button class="approve-btn" data-student-id="${student.id}">Approve</button><button class="reject-btn" data-student-id="${student.id}">Reject</button>` : 'N/A';
+        row.innerHTML = `<td>${student.id}</td><td>${student.email}</td><td>${evidence}</td><td>${new Date(student.submittedAt).toLocaleString()}</td><td><span class="status-label status-${student.status}">${student.status}</span></td><td class="actions">${actions}</td>`;
         tbody.appendChild(row);
       });
     }
 
-    // --- Fetch all students from the backend ---
-    async function fetchStudents() {
+    function renderPagination({ totalPages, currentPage }) {
+      paginationControls.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      const prevBtn = document.createElement('button');
+      prevBtn.textContent = 'Previous';
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.addEventListener('click', () => { state.currentPage--; fetchAndRenderStudents(); });
+      paginationControls.appendChild(prevBtn);
+
+      for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.textContent = i;
+        if (i === currentPage) pageBtn.classList.add('active');
+        pageBtn.addEventListener('click', () => { state.currentPage = i; fetchAndRenderStudents(); });
+        paginationControls.appendChild(pageBtn);
+      }
+
+      const nextBtn = document.createElement('button');
+      nextBtn.textContent = 'Next';
+      nextBtn.disabled = currentPage === totalPages;
+      nextBtn.addEventListener('click', () => { state.currentPage++; fetchAndRenderStudents(); });
+      paginationControls.appendChild(nextBtn);
+    }
+
+    // --- Data Fetching ---
+    async function fetchAndRenderStudents() {
+      loadingState.textContent = 'Loading...';
+      loadingState.style.display = 'block';
+      document.getElementById('verifications-table').style.display = 'none';
+
+      const { currentPage, currentFilter, currentSearch, limit } = state;
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: limit,
+      });
+      if (currentFilter !== 'all') params.append('status', currentFilter);
+      if (currentSearch) params.append('search', currentSearch);
+
       try {
-        const response = await fetch('/student/admin/students');
+        const response = await fetch(`/student/admin/students?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch data');
-        allStudents = await response.json();
-        renderTable();
+        const data = await response.json();
+        renderTable(data.students);
+        renderPagination(data);
       } catch (error) {
-        loadingState.style.display = 'none';
         showAlert('Error fetching student data: ' + error.message, 'error');
       }
     }
 
-    // --- Handle approve/reject actions ---
+    // --- Action Handler ---
     async function handleVerificationAction(studentId, action, button) {
       if (!window.confirm(`Are you sure you want to ${action} student #${studentId}?`)) return;
-
       button.disabled = true;
-      const rejectBtn = button.parentElement.querySelector('.reject-btn');
-      if(rejectBtn) rejectBtn.disabled = true;
-
 
       try {
         const response = await fetch('/student/admin/verify-student', {
@@ -232,54 +176,46 @@
           body: JSON.stringify({ studentId, action })
         });
         const result = await response.json();
-
         if (!response.ok) throw new Error(result.error || 'API request failed');
 
-        // Update local state and re-render
-        const student = allStudents.find(s => s.id == studentId);
-        if (student) student.status = `${action}d`;
-        renderTable();
-
-        if (action === 'approve') {
-          if (result.checkoutUrl) {
-            const successMessage = `Student #${studentId} approved. URL: <strong>${result.checkoutUrl}</strong> <button class="copy-btn" onclick="copyToClipboard('${result.checkoutUrl}')">Copy</button>`;
-            showAlert(successMessage, 'success', true);
-          } else {
-             showAlert('Student approved, but failed to get a valid Stripe URL.', 'error');
-          }
-        } else {
-          showAlert(`Student #${studentId} rejected.`, 'success');
-        }
-
+        showAlert(`Student #${studentId} has been ${action}ed.`, 'success');
+        fetchAndRenderStudents(); // Re-fetch to show updated state
       } catch (error) {
         showAlert(`Error: ${error.message}`, 'error');
         button.disabled = false;
-        if(rejectBtn) rejectBtn.disabled = false;
       }
     }
 
-    // --- Event listener for filter controls ---
+    // --- Event Listeners ---
     filterControls.addEventListener('click', (event) => {
-        if(event.target.tagName === 'BUTTON'){
-            currentFilter = event.target.dataset.filter;
+        if (event.target.tagName === 'BUTTON') {
+            state.currentFilter = event.target.dataset.filter;
+            state.currentPage = 1; // Reset to first page
             document.querySelectorAll('#filter-controls button').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            renderTable();
+            fetchAndRenderStudents();
         }
     });
 
-    // --- Copy to Clipboard Utility ---
-    window.copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showAlert('URL copied!'), () => showAlert('Failed to copy.','error'));
-
-    // --- Event Delegation for action buttons ---
-    tbody.addEventListener('click', (event) => {
-      const target = event.target;
-      if (target.matches('.approve-btn')) handleVerificationAction(target.dataset.studentId, 'approve', target);
-      if (target.matches('.reject-btn')) handleVerificationAction(target.dataset.studentId, 'reject', target);
+    searchInput.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            state.currentSearch = searchInput.value;
+            state.currentPage = 1;
+            fetchAndRenderStudents();
+        }
     });
 
-    // --- Initial fetch on page load ---
-    fetchStudents();
+    tbody.addEventListener('click', (event) => {
+      if (event.target.matches('.approve-btn, .reject-btn')) {
+        const button = event.target;
+        const studentId = button.dataset.studentId;
+        const action = button.classList.contains('approve-btn') ? 'approve' : 'reject';
+        handleVerificationAction(studentId, action, button);
+      }
+    });
+
+    // --- Initial Fetch ---
+    fetchAndRenderStudents();
   });
 </script>
 
