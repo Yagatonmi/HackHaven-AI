@@ -8,9 +8,8 @@ const router = express.Router();
 
 // --- CONFIGURATION ---
 
-// Correctly configure multer to save to the secure, git-ignored 'uploads' directory
 const upload = multer({
-  dest: path.join(__dirname, 'uploads/'), // Corrected: Save to backend/uploads/
+  dest: path.join(__dirname, 'uploads/'),
   limits: { fileSize: 2 * 1024 * 1024 }, // max 2MB
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -19,10 +18,8 @@ const upload = multer({
   }
 });
 
-// Simple in-memory DB for demo (replace with real DB)
-let pendingStudents = []; // {id, email, filePath, status}
+let pendingStudents = [];
 
-// Configure email transporter (using a mock for this example)
 const transporter = {
   sendMail: (options) => {
     console.log('--- Email Simulation ---');
@@ -35,6 +32,30 @@ const transporter = {
 };
 
 // --- ROUTES ---
+
+// 4) Student status lookup endpoint (more secure using ID)
+router.get('/status/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Student ID parameter is required.' });
+    }
+
+    // Note: No auth, but using a non-guessable ID is better than an email.
+    const student = pendingStudents.find(s => s.id == id);
+
+    if (!student) {
+        return res.status(404).json({ error: 'No verification status found for this ID.' });
+    }
+
+    res.json({
+        email: student.email,
+        status: student.status,
+        submittedAt: student.submittedAt,
+        approvedAt: student.approvedAt || null,
+        stripeUrl: student.stripeUrl || null
+    });
+});
 
 // 1) Student submits verification
 router.post('/submit-student-verification', upload.single('studentFile'), (req, res) => {
@@ -51,10 +72,12 @@ router.post('/submit-student-verification', upload.single('studentFile'), (req, 
     email,
     filePath: req.file ? req.file.path : null,
     eduEmail: eduEmail,
-    status: 'pending'
+    status: 'pending',
+    submittedAt: new Date().toISOString()
   };
   pendingStudents.push(student);
 
+  // Return the unique ID to the client so they can use it to check their status
   res.json({ message: 'Verification submitted. Await admin approval.', studentId: student.id });
 });
 
@@ -65,7 +88,7 @@ router.get('/admin/pending-students', (req, res) => {
 
 // 3) Admin approves/rejects
 router.post('/admin/verify-student', async (req, res) => {
-  const { studentId, action } = req.body; // action: 'approve' or 'reject'
+  const { studentId, action } = req.body;
   const student = pendingStudents.find(s => s.id == studentId);
 
   if (!student) return res.status(404).json({ error: 'Student not found' });
@@ -73,8 +96,8 @@ router.post('/admin/verify-student', async (req, res) => {
 
   if (action === 'approve') {
     student.status = 'approved';
+    student.approvedAt = new Date().toISOString();
 
-    // Corrected Logic: Generate a Stripe Checkout link instead of creating a subscription directly.
     try {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -85,7 +108,8 @@ router.post('/admin/verify-student', async (req, res) => {
         cancel_url: 'https://example.com/cancel',
       });
 
-      // Send approval email with the checkout link
+      student.stripeUrl = session.url;
+
       await transporter.sendMail({
         from: 'no-reply@hackhaven.com',
         to: student.email,
@@ -102,7 +126,6 @@ router.post('/admin/verify-student', async (req, res) => {
   } else if (action === 'reject') {
     student.status = 'rejected';
 
-    // Send rejection email
     await transporter.sendMail({
       from: 'no-reply@hackhaven.com',
       to: student.email,
@@ -110,7 +133,6 @@ router.post('/admin/verify-student', async (req, res) => {
       text: 'Your student verification was rejected. You can still subscribe to the standard $3/month plan.'
     });
 
-    // Remove uploaded file if exists
     if (student.filePath && fs.existsSync(student.filePath)) fs.unlinkSync(student.filePath);
 
     res.json({ message: 'Student rejected and notified.' });

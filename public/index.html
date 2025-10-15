@@ -208,22 +208,13 @@
   verificationForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(verificationForm);
-    verificationMessage.textContent = ''; // Clear previous messages
+    verificationMessage.textContent = '';
 
-    // --- Show loading state ---
     submitBtn.style.display = 'none';
     spinner.style.display = 'block';
 
-    // --- Basic validation ---
-    if (!formData.get('email')) {
-      verificationMessage.textContent = 'Please enter your account email.';
-      verificationMessage.style.color = 'red';
-      submitBtn.style.display = 'block';
-      spinner.style.display = 'none';
-      return;
-    }
-    if (!formData.get('eduEmail') && !formData.get('studentFile').name) {
-      verificationMessage.textContent = 'Please provide either an edu email or upload a file.';
+    if (!formData.get('email') || (!formData.get('eduEmail') && !formData.get('studentFile').name)) {
+      verificationMessage.textContent = 'Please provide your account email and either an edu email or a file.';
       verificationMessage.style.color = 'red';
       submitBtn.style.display = 'block';
       spinner.style.display = 'none';
@@ -239,10 +230,16 @@
       const result = await response.json();
 
       if (response.ok) {
-        verificationForm.reset();
+        // --- MODIFICATION START ---
+        // On success, save the ID and redirect to the status page.
+        localStorage.setItem('studentVerificationId', result.studentId);
         verificationMessage.style.color = 'green';
-        verificationMessage.textContent = result.message;
-        setTimeout(closeModal, 3000);
+        verificationMessage.textContent = `${result.message} Redirecting you to the status page...`;
+
+        setTimeout(() => {
+          window.location.href = `/student_status.html?id=${result.studentId}`;
+        }, 2000);
+        // --- MODIFICATION END ---
       } else {
         verificationMessage.style.color = 'red';
         verificationMessage.textContent = result.error || 'Submission failed. Please try again.';
@@ -252,9 +249,11 @@
       verificationMessage.style.color = 'red';
       verificationMessage.textContent = 'An unexpected error occurred. Please check your connection and try again.';
     } finally {
-      // --- Hide loading state ---
-      submitBtn.style.display = 'block';
-      spinner.style.display = 'none';
+      // Keep spinner and button hidden on success, as we are redirecting.
+      if (!response.ok) {
+          submitBtn.style.display = 'block';
+          spinner.style.display = 'none';
+      }
     }
   });
 </script>
