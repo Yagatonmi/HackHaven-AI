@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
-const nodemailer = require('nodemailer');
+const sendEmail = require('./utils/sendEmail'); // Import the new email utility
 const router = express.Router();
 
 // --- CONFIGURATION ---
@@ -22,10 +22,6 @@ const upload = multer({
 let pendingStudents = [];
 let verificationTokens = new Map();
 const activeConnections = new Map();
-
-const transporter = nodemailer.createTransport({
-    jsonTransport: true
-});
 
 // --- SSE Helper Function ---
 function sendStatusUpdate(email, data) {
@@ -62,7 +58,7 @@ router.get('/status/updates', (req, res) => {
     });
 });
 
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required.' });
 
@@ -73,18 +69,13 @@ router.post('/verify-email', async (req, res) => {
     const expires = Date.now() + 15 * 60 * 1000;
     verificationTokens.set(token, { email, expires });
 
-    try {
-        const verificationLink = `http://localhost:3000/student_status.html?token=${token}`;
-        const mailResult = await transporter.sendMail({
-            from: 'no-reply@hackhaven.com', to: email,
-            subject: 'Your HackHaven Status Link',
-            text: `Please use the following link to securely view your verification status. This link is valid for 15 minutes.\n\n${verificationLink}`
-        });
-        console.log("Verification email sent:", mailResult.message);
-        res.status(200).json({ message: 'A verification link has been sent to your email.' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to send verification email.' });
-    }
+    const verificationLink = `http://localhost:3000/student_status.html?token=${token}`;
+    sendEmail({
+        from: 'no-reply@hackhaven.com', to: email,
+        subject: 'Your HackHaven Status Link',
+        text: `Please use the following link to securely view your verification status. This link is valid for 15 minutes.\n\n${verificationLink}`
+    });
+    res.status(200).json({ message: 'A verification link has been sent to your email.' });
 });
 
 router.get('/status', (req, res) => {
@@ -151,8 +142,8 @@ router.post('/admin/verify-student', async (req, res) => {
 
       sendStatusUpdate(student.email, { status: student.status, approvedAt: student.approvedAt, stripeUrl: student.stripeUrl });
 
-      // --- ENHANCED EMAIL TEMPLATE ---
-      const mailResult = await transporter.sendMail({
+      // --- Use the new non-blocking email function ---
+      sendEmail({
         from: 'no-reply@hackhaven.com', to: student.email,
         subject: 'Your HackHaven Student Verification Has Been Approved',
         html: `
@@ -164,7 +155,7 @@ router.post('/admin/verify-student', async (req, res) => {
             <p>Welcome to the community!</p>
         `
       });
-      console.log("Approval email sent:", mailResult.message);
+
       res.json({ message: 'Student approved. Checkout link sent.', checkoutUrl: session.url });
 
     } catch (err) {
@@ -176,8 +167,8 @@ router.post('/admin/verify-student', async (req, res) => {
 
     sendStatusUpdate(student.email, { status: student.status });
 
-    // --- ENHANCED EMAIL TEMPLATE ---
-    const mailResult = await transporter.sendMail({
+    // --- Use the new non-blocking email function ---
+    sendEmail({
       from: 'no-reply@hackhaven.com', to: student.email,
       subject: 'Your HackHaven Student Verification Has Been Rejected',
       html: `
@@ -187,7 +178,6 @@ router.post('/admin/verify-student', async (req, res) => {
         <p>If you believe this was in error, please contact our support team. You can still join the HackHaven community by subscribing to our standard plan.</p>
       `
     });
-    console.log("Rejection email sent:", mailResult.message);
 
     if (student.filePath && fs.existsSync(student.filePath)) fs.unlinkSync(student.filePath);
 
