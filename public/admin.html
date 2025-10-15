@@ -18,12 +18,31 @@
     background-color: #fff;
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 4px Dg(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
   h1 {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     color: #1e2a38;
+  }
+  .filter-controls {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .filter-controls button {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .filter-controls button.active {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
   }
   table {
     width: 100%;
@@ -59,8 +78,6 @@
   }
   .approve-btn { background-color: #00bfa5; }
   .reject-btn { background-color: #f44336; }
-  .approve-btn:hover:not(:disabled) { background-color: #009c87; }
-  .reject-btn:hover:not(:disabled) { background-color: #d32f2f; }
   .status-label {
     padding: 0.3rem 0.6rem;
     border-radius: 15px;
@@ -86,10 +103,6 @@
     padding: 0.3rem 0.6rem;
     margin-left: 1rem;
     cursor: pointer;
-    border-radius: 5px;
-    border: 1px solid #007bff;
-    background-color: #007bff;
-    color: white;
   }
   #loading-state {
     text-align: center;
@@ -102,6 +115,13 @@
 
 <div class="container">
   <h1>Student Verification Dashboard</h1>
+
+  <div class="filter-controls" id="filter-controls">
+    <button class="active" data-filter="all">All</button>
+    <button data-filter="pending">Pending</button>
+    <button data-filter="approved">Approved</button>
+    <button data-filter="rejected">Rejected</button>
+  </div>
 
   <div id="alert-container"></div>
 
@@ -129,36 +149,31 @@
     const tbody = document.getElementById('verifications-tbody');
     const loadingState = document.getElementById('loading-state');
     const alertContainer = document.getElementById('alert-container');
+    const filterControls = document.getElementById('filter-controls');
 
-    let allVerifications = []; // Store all verifications to re-render
+    let currentFilter = 'all'; // Default filter
+    let allStudents = []; // Cache all students to avoid re-fetching
 
-    // --- Show a dynamic alert message ---
+    // --- Show an alert message ---
     function showAlert(message, type = 'success', isHtml = false) {
-      if (isHtml) {
-        alertContainer.innerHTML = message;
-      } else {
-        alertContainer.textContent = message;
-      }
+      if (isHtml) alertContainer.innerHTML = message;
+      else alertContainer.textContent = message;
       alertContainer.className = `alert-${type}`;
       alertContainer.style.display = 'block';
-      setTimeout(() => {
-        alertContainer.style.display = 'none';
-        alertContainer.innerHTML = '';
-      }, 8000);
+      setTimeout(() => { alertContainer.style.display = 'none'; }, 8000);
     }
 
-    // --- Render table rows ---
+    // --- Render table based on current filter ---
     function renderTable() {
-      const pending = allVerifications.filter(v => v.status === 'pending');
-      tbody.innerHTML = ''; // Clear existing rows
-
-      if (allVerifications.length === 0) {
-        loadingState.textContent = 'No verification requests found.';
-        return;
+      let studentsToRender = allStudents;
+      if (currentFilter !== 'all') {
+        studentsToRender = allStudents.filter(s => s.status === currentFilter);
       }
 
-      if (pending.length === 0) {
-        loadingState.textContent = 'No pending verifications to show.';
+      tbody.innerHTML = '';
+
+      if (studentsToRender.length === 0) {
+        loadingState.textContent = `No ${currentFilter === 'all' ? '' : currentFilter} students found.`;
         loadingState.style.display = 'block';
         document.getElementById('verifications-table').style.display = 'none';
       } else {
@@ -166,13 +181,15 @@
         document.getElementById('verifications-table').style.display = 'table';
       }
 
-      pending.forEach(student => {
+      studentsToRender.forEach(student => {
         const row = document.createElement('tr');
         row.setAttribute('data-row-id', student.id);
 
-        const evidence = student.filePath
-          ? `<a href="/student/uploads/${student.filePath.split('/').pop()}" target="_blank">View File</a>`
-          : student.eduEmail || 'N/A';
+        const evidence = student.filePath ? `<a href="/student/uploads/${student.filePath.split('/').pop()}" target="_blank">View File</a>` : student.eduEmail || 'N/A';
+        const actions = student.status === 'pending'
+          ? `<button class="approve-btn" data-student-id="${student.id}">Approve</button>
+             <button class="reject-btn" data-student-id="${student.id}">Reject</button>`
+          : 'N/A';
 
         row.innerHTML = `
           <td>${student.id}</td>
@@ -180,35 +197,33 @@
           <td>${evidence}</td>
           <td>${new Date(student.submittedAt).toLocaleString()}</td>
           <td><span class="status-label status-${student.status}">${student.status}</span></td>
-          <td class="actions">
-            <button class="approve-btn" data-student-id="${student.id}">Approve</button>
-            <button class="reject-btn" data-student-id="${student.id}">Reject</button>
-          </td>
+          <td class="actions">${actions}</td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    // --- Fetch all verifications from the backend ---
-    async function fetchVerifications() {
+    // --- Fetch all students from the backend ---
+    async function fetchStudents() {
       try {
-        const response = await fetch('/student/admin/pending-students'); // Endpoint should return all for a complete view
+        const response = await fetch('/student/admin/students');
         if (!response.ok) throw new Error('Failed to fetch data');
-        allVerifications = await response.json();
+        allStudents = await response.json();
         renderTable();
       } catch (error) {
         loadingState.style.display = 'none';
-        showAlert('Error fetching verifications: ' + error.message, 'error');
+        showAlert('Error fetching student data: ' + error.message, 'error');
       }
     }
 
     // --- Handle approve/reject actions ---
     async function handleVerificationAction(studentId, action, button) {
-      if (!window.confirm(`Are you sure you want to ${action} student #${studentId}?`)) {
-        return;
-      }
+      if (!window.confirm(`Are you sure you want to ${action} student #${studentId}?`)) return;
 
-      button.disabled = true; // Prevent multiple clicks
+      button.disabled = true;
+      const rejectBtn = button.parentElement.querySelector('.reject-btn');
+      if(rejectBtn) rejectBtn.disabled = true;
+
 
       try {
         const response = await fetch('/student/admin/verify-student', {
@@ -221,18 +236,13 @@
         if (!response.ok) throw new Error(result.error || 'API request failed');
 
         // Update local state and re-render
-        const student = allVerifications.find(s => s.id == studentId);
+        const student = allStudents.find(s => s.id == studentId);
         if (student) student.status = `${action}d`;
         renderTable();
 
         if (action === 'approve') {
-          // Validate and show Stripe URL
-          if (result.checkoutUrl && result.checkoutUrl.startsWith('https://checkout.stripe.com/')) {
-            const successMessage = `
-              Student #${studentId} approved. Stripe Checkout URL:
-              <strong>${result.checkoutUrl}</strong>
-              <button class="copy-btn" onclick="copyToClipboard('${result.checkoutUrl}')">Copy</button>
-            `;
+          if (result.checkoutUrl) {
+            const successMessage = `Student #${studentId} approved. URL: <strong>${result.checkoutUrl}</strong> <button class="copy-btn" onclick="copyToClipboard('${result.checkoutUrl}')">Copy</button>`;
             showAlert(successMessage, 'success', true);
           } else {
              showAlert('Student approved, but failed to get a valid Stripe URL.', 'error');
@@ -243,32 +253,33 @@
 
       } catch (error) {
         showAlert(`Error: ${error.message}`, 'error');
-        button.disabled = false; // Re-enable button on failure
+        button.disabled = false;
+        if(rejectBtn) rejectBtn.disabled = false;
       }
     }
 
+    // --- Event listener for filter controls ---
+    filterControls.addEventListener('click', (event) => {
+        if(event.target.tagName === 'BUTTON'){
+            currentFilter = event.target.dataset.filter;
+            document.querySelectorAll('#filter-controls button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTable();
+        }
+    });
+
     // --- Copy to Clipboard Utility ---
-    window.copyToClipboard = function(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        showAlert('URL copied to clipboard!', 'success');
-      }, (err) => {
-        showAlert('Failed to copy URL.', 'error');
-      });
-    }
+    window.copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showAlert('URL copied!'), () => showAlert('Failed to copy.','error'));
 
     // --- Event Delegation for action buttons ---
     tbody.addEventListener('click', (event) => {
       const target = event.target;
-      if (target.matches('.approve-btn')) {
-        handleVerificationAction(target.dataset.studentId, 'approve', target);
-      }
-      if (target.matches('.reject-btn')) {
-        handleVerificationAction(target.dataset.studentId, 'reject', target);
-      }
+      if (target.matches('.approve-btn')) handleVerificationAction(target.dataset.studentId, 'approve', target);
+      if (target.matches('.reject-btn')) handleVerificationAction(target.dataset.studentId, 'reject', target);
     });
 
     // --- Initial fetch on page load ---
-    fetchVerifications();
+    fetchStudents();
   });
 </script>
 

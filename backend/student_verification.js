@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
-const sendEmail = require('./utils/sendEmail'); // Import the new email utility
+const sendEmail = require('./utils/sendEmail');
 const router = express.Router();
 
 // --- CONFIGURATION ---
@@ -113,8 +113,15 @@ router.post('/submit-student-verification', upload.single('studentFile'), (req, 
   res.json({ message: 'Verification submitted. Await admin approval.', studentId: student.id });
 });
 
-router.get('/admin/pending-students', (req, res) => {
-  res.json(pendingStudents.filter(s => s.status === 'pending'));
+router.get('/admin/students', (req, res) => {
+  const { status } = req.query;
+
+  if (status && status !== 'all') {
+    const filteredStudents = pendingStudents.filter(s => s.status === status);
+    return res.json(filteredStudents);
+  }
+
+  res.json(pendingStudents);
 });
 
 router.post('/admin/verify-student', async (req, res) => {
@@ -142,7 +149,6 @@ router.post('/admin/verify-student', async (req, res) => {
 
       sendStatusUpdate(student.email, { status: student.status, approvedAt: student.approvedAt, stripeUrl: student.stripeUrl });
 
-      // --- Use the new non-blocking email function ---
       sendEmail({
         from: 'no-reply@hackhaven.com', to: student.email,
         subject: 'Your HackHaven Student Verification Has Been Approved',
@@ -167,7 +173,6 @@ router.post('/admin/verify-student', async (req, res) => {
 
     sendStatusUpdate(student.email, { status: student.status });
 
-    // --- Use the new non-blocking email function ---
     sendEmail({
       from: 'no-reply@hackhaven.com', to: student.email,
       subject: 'Your HackHaven Student Verification Has Been Rejected',
