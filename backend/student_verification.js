@@ -114,7 +114,7 @@ router.post('/submit-student-verification', upload.single('studentFile'), (req, 
 });
 
 router.get('/admin/students', (req, res) => {
-  const { status, search, page = 1, limit = 20 } = req.query;
+  const { status, search, page = 1, limit = 20, sortBy, sortOrder = 'asc' } = req.query;
 
   let results = [...pendingStudents];
 
@@ -128,6 +128,17 @@ router.get('/admin/students', (req, res) => {
       s.email.toLowerCase().includes(searchTerm) ||
       (s.eduEmail && s.eduEmail.toLowerCase().includes(searchTerm))
     );
+  }
+
+  if (sortBy) {
+      results.sort((a, b) => {
+          const valA = a[sortBy] ? a[sortBy].toLowerCase() : '';
+          const valB = b[sortBy] ? b[sortBy].toLowerCase() : '';
+
+          if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+          if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+          return 0;
+      });
   }
 
   const totalCount = results.length;
