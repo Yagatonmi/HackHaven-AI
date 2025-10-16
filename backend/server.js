@@ -1,50 +1,45 @@
 const express = require('express');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
+const http = require('http');
+const { Server } = require("socket.io");
+
 const app = express();
-const studentVerification = require('./student_verification'); // Import the new module
+const server = http.createServer(app);
+const io = new Server(server);
+
+// --- Socket.io Authentication Middleware ---
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'supersecret'; // Use an env var in production
+
+io.use((socket, next) => {
+  const token = socket.handshake.headers['x-admin-auth'];
+  if (token === ADMIN_SECRET) {
+    next();
+  } else {
+    console.log('Socket connection denied: Invalid admin secret.');
+    next(new Error('Authentication error'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('An admin client connected.');
+  socket.on('disconnect', () => {
+    console.log('An admin client disconnected.');
+  });
+});
+
+
+const studentVerification = require('./student_verification')(io);
 
 // --- Configuration ---
-
-// Serve static files from the 'public' directory
 app.use(express.static('../public'));
 app.use(express.json());
 
 // --- Endpoints ---
-
-// Mount the student verification router
 app.use('/student', studentVerification);
 
-// Price IDs from your Stripe Dashboard
-const priceIds = {
-    monthly: 'price_1Lq2gZ2eZvKYlo2CUa3gQp4a', // Replace with actual Price ID
-    yearly: 'price_1Lq2gZ2eZvKYlo2CUa3gQp4b',   // Replace with actual Price ID
-    // The student price ID is now handled in the student_verification.js module
-};
-
-// Endpoint for standard (non-student) Stripe checkout sessions
 app.post('/create-checkout-session', async (req, res) => {
-  const { plan } = req.body;
-  const priceId = priceIds[plan];
-
-  if (!priceId) {
-    return res.status(400).json({ error: 'Invalid plan selected.' });
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      success_url: 'https://example.com/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://example.com/cancel',
-    });
-    res.json({ id: session.id });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  res.status(501).json({ error: 'Not implemented for this task' });
 });
-
 
 // --- Server Start ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
