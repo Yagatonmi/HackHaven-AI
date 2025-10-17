@@ -1,45 +1,41 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
+const verifySocketAuth = require('./utils/verifySocketAuth');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- Socket.io Authentication Middleware ---
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'supersecret'; // Use an env var in production
+// --- In-Memory Data Stores ---
+let pendingStudents = [];
+let verificationTokens = new Map();
 
-io.use((socket, next) => {
-  const token = socket.handshake.headers['x-admin-auth'];
-  if (token === ADMIN_SECRET) {
-    next();
-  } else {
-    console.log('Socket connection denied: Invalid admin secret.');
-    next(new Error('Authentication error'));
-  }
-});
+// --- Socket.io Middleware and Connection Handling ---
+io.use(verifySocketAuth);
 
 io.on('connection', (socket) => {
-  console.log('An admin client connected.');
+  const { user } = socket;
+  console.log(`[socket.io] A user connected with role: ${user.role}`);
+
+  if (user.role === 'admin') {
+    socket.join('admins');
+  } else if (user.role === 'student') {
+    socket.join(`student:${user.id}`);
+  }
+
   socket.on('disconnect', () => {
-    console.log('An admin client disconnected.');
+    console.log(`[socket.io] User ${user.email} disconnected.`);
   });
 });
 
+const studentVerification = require('./student_verification')({ io, pendingStudents, verificationTokens });
+const auth = require('./auth'); // Import the new auth router
 
-const studentVerification = require('./student_verification')(io);
-
-// --- Configuration ---
 app.use(express.static('../public'));
 app.use(express.json());
-
-// --- Endpoints ---
 app.use('/student', studentVerification);
+app.use('/auth', auth); // Mount the auth router
 
-app.post('/create-checkout-session', async (req, res) => {
-  res.status(501).json({ error: 'Not implemented for this task' });
-});
-
-// --- Server Start ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
